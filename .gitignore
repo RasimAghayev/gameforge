@@ -1,0 +1,47 @@
+# .gitignore
+
+# Binaries
+/server
+/worker
+/scheduler
+*.exe
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+vendor/
+.GOARCH
+.GOOS
+go.work
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+secrets/
+*.key
+*.pem
+
+# Docker
+.dockerignore
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+coverage.out
+coverage.html
+
+# Docs
+docs/BASELINE.md

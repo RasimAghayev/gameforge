@@ -1,0 +1,12 @@
+name: gameforge
+type: service
+provides:
+  - api: openapi.yaml
+  - events: [player.registered, player.login, purchase.completed, quest.completed, achievement.unlocked, badge.earned]
+depends_on:
+  services: []
+  libraries: []
+runs_standalone: true
+related:
+  - repo: none
+    why: "Greenfield gamification engine; no internal service dependencies yet"

@@ -1,0 +1,119 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: gameforge
+      POSTGRES_PASSWORD: changeme
+      POSTGRES_DB: gameforge
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./migrations/postgres:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gameforge -d gameforge"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongo:
+    image: mongo:7
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: gameforge
+      MONGO_INITDB_ROOT_PASSWORD: changeme
+      MONGO_INITDB_DATABASE: gameforge
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodata:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ping:1})"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--requirepass", "changeme"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "changeme", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  nats:
+    image: nats:2.10-alpine
+    command: ["--jetstream"]
+    ports:
+      - "4222:4222"
+      - "6222:6222"
+      - "8222:8222"
+    healthcheck:
+      test: ["CMD", "nats", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  nginx:
+    image: nginx:1.25-alpine
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./infrastructure/docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      server:
+        condition: service_healthy
+
+  server:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: build
+    image: ghcr.io/rasimaghayev/gameforge:dev
+    environment:
+      - SERVER_PORT=8080
+      - SERVER_ENV=development
+      - PG_HOST=postgres
+      - PG_PORT=5432
+      - PG_USER=gameforge
+      - PG_PASSWORD=changeme
+      - PG_DB=gameforge
+      - MONGO_HOST=mongo
+      - MONGO_PORT=27017
+      - MONGO_USER=gameforge
+      - MONGO_PASSWORD=changeme
+      - MONGO_DB=gameforge
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=changeme
+      - NATS_URL=nats://nats:4222
+      - JWT_SECRET=changeme-jwt-secret
+      - API_KEY_PREFIX=gf_
+      - TENANT_ISOLATION=enabled
+    ports:
+      - "8081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/server", "healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:
+  mongodata:
+  redisdata:

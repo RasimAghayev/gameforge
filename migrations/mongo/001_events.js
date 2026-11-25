@@ -1,0 +1,3 @@
+-- MongoDB collections (events / history) are created implicitly by the driver.
+-- Collection: game_events
+-- Indexes: {tenant_id: 1, player_id: 1, event_type: 1, created_at: 1}

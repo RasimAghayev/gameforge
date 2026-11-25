@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  push:
+    branches: [preview, test, main]
+  pull_request:
+    branches: [preview]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@4b2e1e131112bed43bad8012cebf05a5892e0c22
+      - uses: docker/setup-buildx-action@f95db51f3ba032d7f41e366574e1552a0623ef5a
+      - name: Lint
+        run: docker build --target build -t gameforge:lint . && docker run --rm gameforge:lint sh -c "command -v golangci-lint >/dev/null 2>&1 || go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.60.0 && golangci-lint run ./..."
+
+  format:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@4b2e1e131112bed43bad8012cebf05a5892e0c22
+      - name: Format check
+        run: docker build --target build -t gameforge:fmt . && docker run --rm gameforge:fmt gofmt -l .
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@4b2e1e131112bed43bad8012cebf05a5892e0c22
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@b7cb82a3947a2b06351fd9e2e98c9360c8530fc3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+  test:
+    needs: [lint, format, secret-scan]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: gameforge
+          POSTGRES_PASSWORD: changeme
+          POSTGRES_DB: gameforge
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U gameforge -d gameforge"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      mongo:
+        image: mongo:7
+        env:
+          MONGO_INITDB_ROOT_USERNAME: gameforge
+          MONGO_INITDB_ROOT_PASSWORD: changeme
+          MONGO_INITDB_DATABASE: gameforge
+        ports: ["27017:27017"]
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ping:1})'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      nats:
+        image: nats:2.10-alpine
+        ports: ["4222:4222"]
+    env:
+      PG_HOST: localhost
+      PG_PORT: 5432
+      PG_USER: gameforge
+      PG_PASSWORD: changeme
+      PG_DB: gameforge
+      MONGO_HOST: localhost
+      MONGO_PORT: 27017
+      MONGO_USER: gameforge
+      MONGO_PASSWORD: changeme
+      MONGO_DB: gameforge
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: changeme
+      NATS_URL: nats://localhost:4222
+      JWT_SECRET: test-jwt-secret
+      API_KEY_PREFIX: gf_
+    steps:
+      - uses: actions/checkout@4b2e1e131112bed43bad8012cebf05a5892e0c22
+      - name: Build image
+        run: docker build --target test -t gameforge:test .
+      - name: Run tests
+        run: docker run --rm --network host -e PG_HOST -e PG_PORT -e PG_USER -e PG_PASSWORD -e PG_DB -e MONGO_HOST -e MONGO_PORT -e MONGO_USER -e MONGO_PASSWORD -e MONGO_DB -e REDIS_HOST -e REDIS_PORT -e REDIS_PASSWORD -e NATS_URL -e JWT_SECRET -e API_KEY_PREFIX gameforge:test
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@4b2e1e131112bed43bad8012cebf05a5892e0c22
+      - name: Build runtime image
+        run: docker build --target runtime -t ghcr.io/rasimaghayev/gameforge:${{ github.sha }} .
