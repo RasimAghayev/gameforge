@@ -3,7 +3,7 @@ module github.com/rasimaghayev/gameforge
 go 1.22
 
 require (
-	github.com/antonmedv/expr v1.16.0
+	github.com/antonmedv/expr v1.18.1
 	github.com/casbin/casbin/v2 v2.8.1
 	github.com/go-playground/validator/v10 v10.15.0
 	github.com/golang-jwt/jwt/v5 v5.2.1
