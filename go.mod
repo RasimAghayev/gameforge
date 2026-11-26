@@ -11,7 +11,7 @@ require (
 	github.com/jackc/pgx/v5 v5.5.4
 	github.com/redis/go-redis/v9 v9.5.1
 	github.com/nats-io/nats.go v1.37.0
-	github.com/go-chi/chi/v5 v5.1.0
+	github.com/go-chi/chi/v5 v5.5.0
 	go.mongodb.org/mongo-driver v1.14.0
 	golang.org/x/crypto v0.21.0
 )
