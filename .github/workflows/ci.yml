@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@4b2e1e131112bed43bad8012cebf05a5892e0c22
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: docker/setup-buildx-action@f95db51f3ba032d7f41e366574e1552a0623ef5a
       - name: Lint
         run: docker build --target build -t gameforge:lint . && docker run --rm gameforge:lint sh -c "command -v golangci-lint >/dev/null 2>&1 || go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.60.0 && golangci-lint run ./..."
@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@4b2e1e131112bed43bad8012cebf05a5892e0c22
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Format check
         run: docker build --target build -t gameforge:fmt . && docker run --rm gameforge:fmt gofmt -l .
 
@@ -36,9 +36,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@4b2e1e131112bed43bad8012cebf05a5892e0c22
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Secret scan
-        uses: gitleaks/gitleaks-action@b7cb82a3947a2b06351fd9e2e98c9360c8530fc3
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
@@ -100,7 +100,7 @@ jobs:
       JWT_SECRET: test-jwt-secret
       API_KEY_PREFIX: gf_
     steps:
-      - uses: actions/checkout@4b2e1e131112bed43bad8012cebf05a5892e0c22
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Build image
         run: docker build --target test -t gameforge:test .
       - name: Run tests
@@ -112,6 +112,6 @@ jobs:
     timeout-minutes: 10
     if: github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@4b2e1e131112bed43bad8012cebf05a5892e0c22
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Build runtime image
         run: docker build --target runtime -t ghcr.io/rasimaghayev/gameforge:${{ github.sha }} .
